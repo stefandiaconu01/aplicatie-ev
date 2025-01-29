@@ -4,7 +4,7 @@ import fetch from 'node-fetch';
 const DATA_API_URL = `https://eu-central-1.aws.data.mongodb-api.com/app/data-ikloh/endpoint/data/v1/action`;
 
 const API_KEY = "4VBvtU5RPVQOmVKmDoJN7mCmx453QbzScV1vKovCYlilrT7tMD0nbyH043083CoG";
-console.log(API_KEY);
+//console.log(API_KEY);
 
 const HEADERS = {
   'Content-Type': 'application/json',
