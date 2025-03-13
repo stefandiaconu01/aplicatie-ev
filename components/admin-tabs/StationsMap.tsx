@@ -107,22 +107,6 @@ const StationsMap = () => {
     }
   };
 
-  const renderStation = ({ item }: { item: Station }) => (
-    <TouchableOpacity style={localStyles.card}>
-      <View style={localStyles.cardContent}>
-        <View>
-          <Text style={localStyles.stationName}>{item.name}</Text>
-          <Text style={localStyles.details}>SN: {item.sn}</Text>
-          <Text style={localStyles.details}>Price: {item.kwPrice} RON/kWh</Text>
-          <Text style={localStyles.details}>
-            Status: {item.status === "connected" ? "Online" : "Offline"}
-          </Text>
-        </View>
-        <Button title="Edit" onPress={() => handleEditPress(item)} />
-      </View>
-    </TouchableOpacity>
-  );
-
   if (error) {
     return (
       <View style={styles.errorContainer}>
@@ -135,8 +119,24 @@ const StationsMap = () => {
     <View style={{ flex: 1 }}>
       <FlatList
         data={stations}
-        renderItem={renderStation}
-        keyExtractor={(item) => item.id} // Ensure a unique key for each item
+        renderItem={({ item }) => (
+          <TouchableOpacity key={item.id} style={localStyles.card}>
+            <View style={localStyles.cardContent}>
+              <View>
+                <Text style={localStyles.stationName}>{item.name}</Text>
+                <Text style={localStyles.details}>SN: {item.sn}</Text>
+                <Text style={localStyles.details}>
+                  Price: {item.kwPrice} RON/kWh
+                </Text>
+                <Text style={localStyles.details}>
+                  Status: {item.status === "connected" ? "Online" : "Offline"}
+                </Text>
+              </View>
+              <Button title="Edit" onPress={() => handleEditPress(item)} />
+            </View>
+          </TouchableOpacity>
+        )}
+        keyExtractor={(item, index) => (item?.id ? item.id.toString() : `station-${index}`)}
         contentContainerStyle={localStyles.listContainer}
       />
 

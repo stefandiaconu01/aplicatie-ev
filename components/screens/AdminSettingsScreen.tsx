@@ -5,25 +5,7 @@ import styles from '../../app/styles';
 import StationsMap from '../admin-tabs/StationsMap';
 import CarFleets from '../admin-tabs/CarFleets';
 import ManageUsers from '../admin-tabs/ManageUsers';
-
-// Empty screens for each route
-// const EditStationsList = () => (
-//   <View style={styles.centeredContainer}>
-//     <Text style={styles.placeholderText}>Edit Stations List Page</Text>
-//   </View>
-// );
-
-// const EditCarFleets = () => (
-//   <View style={styles.centeredContainer}>
-//     <Text style={styles.placeholderText}>Edit Car Fleets Page</Text>
-//   </View>
-// );
-
-// const EditUsers = () => (
-//   <View style={styles.centeredContainer}>
-//     <Text style={styles.placeholderText}>Edit Users Page</Text>
-//   </View>
-// );
+import OCPPTest from '../admin-tabs/ocppTest';
 
 const Stack = createNativeStackNavigator();
 
@@ -47,6 +29,12 @@ const AdminMainScreen = ({ navigation }: { navigation: any }) => {
         onPress={() => navigation.navigate('ManageUsers')}
       >
         <Text style={styles.buttonText}>Manage Users</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        style={styles.customButton}
+        onPress={() => navigation.navigate('OCPPTest')}
+      >
+        <Text style={styles.buttonText}>OCPP Test</Text>
       </TouchableOpacity>
     </View>
   );
@@ -74,6 +62,11 @@ const AdminSettingsScreen = () => {
         name="ManageUsers"
         component={ManageUsers}
         options={{ title: 'Manage Users' }}
+      />
+      <Stack.Screen
+        name="OCPPTest"
+        component={OCPPTest}
+        options={{ title: 'OCPP Test' }}
       />
     </Stack.Navigator>
   );

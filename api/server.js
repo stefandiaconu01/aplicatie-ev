@@ -1,5 +1,11 @@
+import Constants from "expo-constants";
+
+//NOT USED - CHECK /server/server.js  @@@@
+
+const STRIPE_SECRET_KEY = Constants.expoConfig?.extra?.STRIPE_SECRET_KEY;
+
 // This is your test secret API key.
-const stripe = require('stripe')('sk_test_51QhSjJP7xXDP0ztowicSvxT79mU7GsVdhKlGKHouhY82722PYGvyo5WLQarLjn4MII2JXM92Jw8PkwlKKnZtzEpJ00uOTlloKw');
+const stripe = require('stripe')(STRIPE_SECRET_KEY);
 const express = require('express');
 const app = express();
 app.use(express.static('public'));

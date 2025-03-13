@@ -1,0 +1,182 @@
+import { StyleSheet } from "react-native";
+
+const cardsStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: "#f5f5f5",
+  },
+  emptyMessage: {
+    fontSize: 18,
+    textAlign: "center",
+    color: "#888",
+    marginTop: 20,
+  },
+  fab: {
+    position: "absolute",
+    bottom: 20,
+    right: 20,
+    backgroundColor: "#2196F3",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalContent: {
+    backgroundColor: "white",
+    padding: 20,
+    borderRadius: 10,
+    width: "90%",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginBottom: 10,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: 5,
+    color: "#333",
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+    backgroundColor: "#fff",
+  },
+  cardField: {
+    width: "100%",
+    height: 50,
+    marginVertical: 20,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+  },
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  addButton: {
+    backgroundColor: "#2196F3",
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 20,
+    width: "48%",
+  },
+  addButtonText: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  cancelButton: {
+    backgroundColor: "#eb463b",
+    paddingVertical: 15,
+    paddingHorizontal: 30,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 20,
+    width: "48%",
+  },
+  cancelButtonText: {
+    color: "white",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cardItem: {
+    backgroundColor: "white",
+    padding: 16,
+    marginVertical: 8,
+    borderRadius: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cardText: {
+    fontSize: 16,
+    color: "#333",
+    marginBottom: 5,
+  },
+  boldText: {
+    fontWeight: "bold",
+    color: "#333",
+  },
+  switchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#ddd",
+  },
+  showStripeCardsButton: {
+    backgroundColor: "#4CAF50",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 20,
+  },
+
+  showStripeCardsText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  menuButton: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    padding: 5,
+  },
+
+  menuOptions: {
+    position: "absolute",
+    top: 40,
+    right: 10,
+    backgroundColor: "white",
+    borderRadius: 6,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+    zIndex: 10,
+  },
+
+  menuItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
+  },
+
+  menuItemText: {
+    fontSize: 16,
+    color: "#333",
+  },
+});
+
+export default cardsStyles;

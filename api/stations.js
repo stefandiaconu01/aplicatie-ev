@@ -1,9 +1,12 @@
 import fetch from 'node-fetch';
-// import { MONGO_API_KEY } from '@env';
+
+import Constants from "expo-constants";
+
+const MONGO_API_KEY = Constants.expoConfig?.extra?.MONGO_API_KEY;
 
 const DATA_API_URL = `https://eu-central-1.aws.data.mongodb-api.com/app/data-ikloh/endpoint/data/v1/action`;
 
-const API_KEY = "4VBvtU5RPVQOmVKmDoJN7mCmx453QbzScV1vKovCYlilrT7tMD0nbyH043083CoG";
+const API_KEY = MONGO_API_KEY;
 //console.log(API_KEY);
 
 const HEADERS = {

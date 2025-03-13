@@ -1,446 +1,408 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  Text,
   View,
-  FlatList,
+  Text,
   TouchableOpacity,
-  TextInput,
-  Modal,
-  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  FlatList,
+  Switch,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
+import {
+  CustomerSheetBeta,
+  CustomerSheetError,
+  initStripe,
+} from "@stripe/stripe-react-native";
+import styles from "./CardsStyles";
+import {
+  addCardToDatabase,
+  fetchCardsByUser,
+  updateCardData,
+  resetOtherMainCards,
+  fetchAllStripeCardsForUser,
+  deleteCardFromDatabase,
+} from "../../api/cards";
+import { fetchUserData } from "../../api/users";
+import Constants from "expo-constants";
+
+const STRIPE_PUBLISHABLE_KEY =
+  Constants.expoConfig?.extra?.STRIPE_PUBLISHABLE_KEY;
 
 const Cards = () => {
-  const [cards, setCards] = useState([]); // List of cards
-  const [isAddModalVisible, setIsAddModalVisible] = useState(false); // Controls add form visibility
-  const [isEditModalVisible, setIsEditModalVisible] = useState(false); // Controls edit form visibility
-  const [isConfirmModalVisible, setIsConfirmModalVisible] = useState(false); // Confirm delete modal
-  const [selectedCardIndex, setSelectedCardIndex] = useState(null); // Index of the card being edited
-  const [newCard, setNewCard] = useState({
-    cardHolderName: "",
-    cardNumber: "",
-    cvv: "",
-    expirationDate: "",
-  });
-  const [errorMessage, setErrorMessage] = useState(""); // For validation errors
-  const { expirationMonth, expirationYear } = newCard;
-  const month = parseInt(expirationMonth, 10);
-  const year = parseInt(expirationYear, 10);
+  const [loading, setLoading] = useState(false);
+  const [cards, setCards] = useState([]);
+  const [menuVisible, setMenuVisible] = useState(null);
 
-  // Function to validate the card input fields
-  const validateCard = () => {
-    const { cardHolderName, cardNumber, cvv, expirationDate } = newCard;
-
-    // Check card holder name for invalid characters
-    if (!/^[a-zA-Z\s]+$/.test(cardHolderName)) {
-      setErrorMessage(
-        "Card holder name should only contain letters and spaces."
-      );
-      return false;
+  useEffect(() => {
+    if (STRIPE_PUBLISHABLE_KEY) {
+      initStripe({
+        publishableKey: STRIPE_PUBLISHABLE_KEY,
+        merchantIdentifier: "Arsek Inc.",
+      });
+    } else {
+      console.error("Stripe publishable key is missing!");
     }
 
-    // Check card number for numeric and 16 digits
-    if (!/^\d{16}$/.test(cardNumber)) {
-      setErrorMessage("Card number must be a 16-digit number.");
-      return false;
-    }
+    loadCards();
+  }, []);
 
-    // Check CVV for numeric and 3 digits
-    if (!/^\d{3}$/.test(cvv)) {
-      setErrorMessage("CVV must be a 3-digit number.");
-      return false;
-    }
+  const formatDate = (isoDate) => {
+    if (!isoDate) return "N/A";
 
-    if (!/^\d{4}$/.test(expirationYear)) {
-      setErrorMessage("Expiration year must be in YYYY format.");
-      return false;
-    }
+    const date = new Date(isoDate);
+    const dd = String(date.getDate()).padStart(2, "0");
+    const mm = String(date.getMonth() + 1).padStart(2, "0");
+    const yyyy = date.getFullYear();
+    const HH = String(date.getHours()).padStart(2, "0");
+    const MM = String(date.getMinutes()).padStart(2, "0");
+    const SS = String(date.getSeconds()).padStart(2, "0");
 
-    // // Check expiration date format MM/YY and ensure it's a future date
-    // const expiryRegex = /^(0[1-9]|1[0-2])\/\d{2}$/;
-    // if (!expiryRegex.test(expirationDate)) {
-    //   setErrorMessage("Expiration date must be in MM/YY format.");
-    //   return false;
-    // }
-
-    if (!month || !year || month < 1 || month > 12) {
-      setErrorMessage("Invalid expiration date. Ensure month is 01-12.");
-      return false;
-    }
-
-    const currentDate = new Date();
-    const expiryDate = new Date(year, month - 1); // Use full year and month
-    if (expiryDate <= currentDate) {
-      setErrorMessage("Expiration date must be in the future.");
-      return false;
-    }
-
-    // If all validations pass
-    setErrorMessage("");
-    return true;
+    return `${dd}/${mm}/${yyyy} - ${HH}:${MM}:${SS}`;
   };
 
-  // Function to handle adding a new card
-  const addCard = () => {
-    if (validateCard()) {
-      setCards([
-        ...cards,
+  const loadCards = async () => {
+    try {
+      setLoading(true);
+      const fetchedCards = await fetchCardsByUser();
+      //console.log("Fetched Cards:", fetchedCards);
+      setCards(fetchedCards);
+    } catch (error) {
+      console.error("Error loading cards:", error);
+      Alert.alert("Error", "Failed to load cards.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Function to fetch and display all Stripe cards for this userId
+  const handleShowStripeCards = async () => {
+    try {
+      const stripeCards = await fetchAllStripeCardsForUser();
+
+      if (!stripeCards || stripeCards.length === 0) {
+        Alert.alert("No Cards Found", "No cards are stored in Stripe.");
+        return;
+      }
+
+      const cardList = stripeCards
+        .map(
+          (card, index) =>
+            `${index + 1}. ${card.card.brand} ****${card.card.last4} - Exp: ${
+              card.card.exp_month
+            }/${card.card.exp_year}`
+        )
+        .join("\n");
+
+      Alert.alert("Stripe Cards", cardList);
+    } catch (error) {
+      console.error("Error showing Stripe cards:", error);
+      Alert.alert("Error", "Failed to fetch Stripe cards.");
+    }
+  };
+
+  //la munca: "http://192.168.27.176:3001/"
+  //acasa - IP DINAMIC: "http://192.168.0.103:3001/"
+  const fetchCustomerData = async () => {
+    try {
+      console.log("Fetching customer data...");
+      const response = await fetch("http://192.168.27.176:3001/customer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const jsonData = await response.json();
+      console.log("Server response:", jsonData);
+      return jsonData;
+    } catch (error) {
+      console.error("Error fetching customer data:", error);
+      Alert.alert("Error", "Failed to fetch customer data.");
+      return null;
+    }
+  };
+
+  const fetchSetupIntent = async (customerId) => {
+    try {
+      const response = await fetch(
+        "http://192.168.27.176:3001/create-setup-intent",
         {
-          ...newCard,
-          expirationDate: `${newCard.expirationMonth.padStart(2, "0")}/${
-            newCard.expirationYear
-          }`,
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ customerId }),
+        }
+      );
+      const jsonData = await response.json();
+      console.log("Setup Intent response:", jsonData);
+      return jsonData;
+    } catch (error) {
+      console.error("Error creating setup intent:", error);
+      Alert.alert("Error", "Failed to create setup intent.");
+      return null;
+    }
+  };
+
+  const handleAddCard = async () => {
+    setLoading(true);
+    try {
+      const customerData = await fetchCustomerData();
+      if (!customerData) return;
+
+      const setupIntent = await fetchSetupIntent(customerData.customer);
+      if (!setupIntent) return;
+
+      const { error } = await CustomerSheetBeta.initialize({
+        setupIntentClientSecret: setupIntent.setupIntent,
+        customerEphemeralKeySecret: customerData.ephemeralKeySecret,
+        customerId: customerData.customer,
+        headerTextForSelectionScreen: "Manage your payment method",
+      });
+
+      if (error) {
+        console.error("Error initializing customer sheet:", error);
+        Alert.alert("Error", "Failed to initialize customer sheet.");
+        return;
+      }
+
+      const { error: presentError, paymentMethod } =
+        await CustomerSheetBeta.present();
+
+      //console.log("Payment Method:", paymentMethod);
+
+      if (presentError) {
+        if (presentError.code !== CustomerSheetError.Canceled) {
+          console.error("Error presenting customer sheet:", presentError);
+          Alert.alert("Error", "Failed to present customer sheet.");
+        }
+        return;
+      }
+
+      if (paymentMethod) {
+        const cardData = {
+          cardBrand: paymentMethod.Card.brand,
+          last4: paymentMethod.Card.last4,
+          expMonth: paymentMethod.Card.expMonth,
+          expYear: paymentMethod.Card.expYear,
+          stripeCustomerId: customerData.customer,
+          stripePaymentMethodId: paymentMethod.id,
+        };
+
+        await addCardToDatabase(cardData);
+        Alert.alert("Success", "Card added successfully!");
+      }
+    } catch (error) {
+      console.error("Error adding card:", error);
+      Alert.alert("Error", "Failed to add card.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteCard = async (cardId) => {
+    Alert.alert(
+      "Delete Card",
+      "Are you sure you want to permanently delete this card?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Proceed",
+          onPress: async () => {
+            try {
+              await deleteCardFromDatabase(cardId);
+              Alert.alert("Success", "Card deleted successfully!");
+              loadCards(); // Refresh the card list
+            } catch (error) {
+              console.error("Error deleting card:", error);
+              Alert.alert("Error", "Failed to delete card.");
+            }
+          },
         },
-      ]);
-      // Add the new card to the list
-      resetForm();
-      setIsAddModalVisible(false); // Close the form modal
-    }
-  };
-
-  // Function to handle saving edits to an existing card
-  const saveCard = () => {
-    if (validateCard()) {
-      const updatedCards = [...cards];
-      updatedCards[selectedCardIndex] = {
-        ...newCard,
-        expirationDate: `${newCard.expirationMonth.padStart(2, "0")}/${
-          newCard.expirationYear
-        }`,
-      };
-      setCards(updatedCards);
-      resetForm();
-      setIsEditModalVisible(false); // Close the edit modal
-    }
-  };
-
-  // Function to reset the form fields
-  const resetForm = () => {
-    setNewCard({
-      cardHolderName: "",
-      cardNumber: "",
-      cvv: "",
-      expirationDate: "",
-    });
-    setSelectedCardIndex(null);
-    setErrorMessage("");
-  };
-
-  // Function to handle removing a card
-  const removeCard = () => {
-    const updatedCards = cards.filter(
-      (_, index) => index !== selectedCardIndex
+      ]
     );
-    setCards(updatedCards);
-    setIsConfirmModalVisible(false);
-    setIsEditModalVisible(false);
   };
+
+  const handleToggleSwitch = async (cardId, field, currentValue) => {
+    const hasMainCard = cards.some((card) => card.isMain);
+
+    if (field === "isAutocharge" && !currentValue) {
+      try {
+        const userData = await fetchUserData();
+        if (!userData || !userData.autocharge) {
+          Alert.alert(
+            "Autocharge Not Enabled",
+            "Your account is not allowed to register autocharge cards. Please check the General Settings page and enable autocharge in order to proceed."
+          );
+          return;
+        }
+      } catch (error) {
+        console.error("Error checking user autocharge status:", error);
+        Alert.alert("Error", "Failed to verify autocharge permission.");
+        return;
+      }
+
+      if (!hasMainCard) {
+        Alert.alert(
+          "Define a Main Card First",
+          "You cannot use autocharging before defining a Main Card. Please define a Main Card first."
+        );
+        return;
+      }
+
+      Alert.alert(
+        "Activate Autocharge",
+        "Are you sure you want to turn on the autocharge function for this card?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Proceed",
+            onPress: () =>
+              updateCardData(cardId, field, !currentValue).then(loadCards),
+          },
+        ]
+      );
+    } else if (field === "isMain" && !currentValue) {
+      Alert.alert(
+        "Set as Main Card",
+        "Do you want this to be your Main Card? This will also be used for Autocharging, if enabled.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Proceed",
+            onPress: async () => {
+              await resetOtherMainCards(cardId);
+              await updateCardData(cardId, field, !currentValue);
+              loadCards();
+            },
+          },
+        ]
+      );
+    } else if (field === "isMain" && currentValue) {
+      Alert.alert(
+        "Disable Main Card",
+        "You are not allowed to have no Main Card defined and Autocharge turned on. If you wish to continue, you will not be able to use the autocharge function anymore, unless you define a new Main Card.",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Proceed",
+            onPress: async () => {
+              await updateCardData(cardId, "isMain", false);
+              await updateCardData(cardId, "isAutocharge", false);
+              await resetOtherMainCards(null, true); // Reset autocharge for all cards
+              loadCards();
+            },
+          },
+        ]
+      );
+    } else {
+      updateCardData(cardId, field, !currentValue).then(loadCards);
+    }
+  };
+
+  const renderCardItem = ({ item, index }) => (
+    <TouchableWithoutFeedback onPress={() => setMenuVisible(null)}>
+      <View style={styles.cardItem}>
+        {/* Card Details */}
+        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+          <View>
+            <Text style={styles.cardText}>
+              <Text style={styles.boldText}>Brand:</Text> {item.cardBrand}
+            </Text>
+            <Text style={styles.cardText}>
+              <Text style={styles.boldText}>Last 4 Digits:</Text> ****
+              {item.last4}
+            </Text>
+            <Text style={styles.cardText}>
+              <Text style={styles.boldText}>Expiry Date:</Text> {item.expMonth}/
+              {item.expYear}
+            </Text>
+            <Text style={styles.cardText}>
+              <Text style={styles.boldText}>Added at:</Text>{" "}
+              {formatDate(item.addedAt)}
+            </Text>
+            <View style={[styles.switchContainer]}>
+              <Text style={styles.label}>Autocharge:</Text>
+              <Switch
+                value={item.isAutocharge}
+                onValueChange={() =>
+                  handleToggleSwitch(
+                    item._id,
+                    "isAutocharge",
+                    item.isAutocharge
+                  )
+                }
+              />
+            </View>
+
+            <View style={[styles.switchContainer]}>
+              <Text style={styles.label}>Main Card:</Text>
+              <Switch
+                value={item.isMain}
+                onValueChange={() =>
+                  handleToggleSwitch(item._id, "isMain", item.isMain)
+                }
+              />
+            </View>
+          </View>
+
+          {/* Three-Dot Menu */}
+          <TouchableOpacity
+            onPress={() => setMenuVisible(menuVisible === index ? null : index)}
+            style={styles.menuButton}
+          >
+            <Icon name="more-vert" size={24} color="#333" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Menu Options */}
+        {menuVisible === index && (
+          <View style={styles.menuOptions}>
+            <TouchableOpacity
+              style={styles.menuItem}
+              onPress={() => {
+                setMenuVisible(null);
+                handleDeleteCard(item._id);
+              }}
+            >
+              <Text style={styles.menuItemText}>Delete Card</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    </TouchableWithoutFeedback>
+  );
 
   return (
     <View style={styles.container}>
-      {cards.length > 0 ? (
-        <FlatList
-          data={cards}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={({ item, index }) => (
-            <TouchableOpacity
-              style={styles.cardItem}
-              onPress={() => {
-                setSelectedCardIndex(index);
-                setNewCard(item);
-                setIsEditModalVisible(true);
-              }}
-            >
-              <Text style={styles.cardText}>
-                Card Holder: {item.cardHolderName}
-              </Text>
-              <Text style={styles.cardText}>
-                Card Number: {item.cardNumber}
-              </Text>
-              <Text style={styles.cardText}>
-                Expiration: {item.expirationDate || `${item.expirationMonth}/${item.expirationYear}`}
-              </Text>
-            </TouchableOpacity>
-          )}
-        />
-      ) : (
-        <Text style={styles.emptyMessage}>
-          There are no cards saved. Add a new card to get started.
-        </Text>
-      )}
+      <FlatList
+        data={cards}
+        keyExtractor={(item) => item._id}
+        renderItem={renderCardItem}
+        ListEmptyComponent={
+          <Text style={styles.emptyMessage}>
+            There are no cards saved. Add a new card to get started.
+          </Text>
+        }
+        ListFooterComponent={<View style={{ height: 77 }} />}
+      />
 
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => setIsAddModalVisible(true)}
-      >
+      <TouchableOpacity style={styles.fab} onPress={handleAddCard}>
         <Icon name="add" size={30} color="white" />
       </TouchableOpacity>
 
-      <Modal
-        visible={isAddModalVisible}
-        animationType="slide"
-        transparent={true}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Adauga Card</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Card Holder Name"
-              value={newCard.cardHolderName}
-              onChangeText={(text) =>
-                setNewCard({ ...newCard, cardHolderName: text })
-              }
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Card Number"
-              keyboardType="number-pad"
-              value={newCard.cardNumber}
-              onChangeText={(text) =>
-                setNewCard({ ...newCard, cardNumber: text })
-              }
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="CVV"
-              keyboardType="number-pad"
-              value={newCard.cvv}
-              onChangeText={(text) => setNewCard({ ...newCard, cvv: text })}
-            />
-            <View style={styles.row}>
-              <TextInput
-                style={[styles.input, { flex: 1, marginRight: 5 }]}
-                placeholder="MM"
-                keyboardType="number-pad"
-                value={newCard.expirationMonth}
-                onChangeText={(text) =>
-                  setNewCard({ ...newCard, expirationMonth: text })
-                }
-              />
-              <TextInput
-                style={[styles.input, { flex: 1, marginLeft: 5 }]}
-                placeholder="YY"
-                keyboardType="number-pad"
-                value={newCard.expirationYear}
-                onChangeText={(text) =>
-                  setNewCard({ ...newCard, expirationYear: text })
-                }
-              />
-            </View>
-            {errorMessage ? (
-              <Text style={styles.errorText}>{errorMessage}</Text>
-            ) : null}
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.addButton} onPress={addCard}>
-                <Text style={styles.addButtonText}>Add Card</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => setIsAddModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#2196F3" />
         </View>
-      </Modal>
+      )}
 
-      {/* Modal for Editing a Card */}
-      <Modal
-        visible={isEditModalVisible}
-        animationType="slide"
-        transparent={true}
+      <TouchableOpacity
+        style={styles.showStripeCardsButton}
+        onPress={handleShowStripeCards}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Edit Card</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Card Holder Name"
-              value={newCard.cardHolderName}
-              onChangeText={(text) =>
-                setNewCard({ ...newCard, cardHolderName: text })
-              }
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Card Number"
-              keyboardType="number-pad"
-              value={newCard.cardNumber}
-              onChangeText={(text) =>
-                setNewCard({ ...newCard, cardNumber: text })
-              }
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="CVV"
-              keyboardType="number-pad"
-              value={newCard.cvv}
-              onChangeText={(text) => setNewCard({ ...newCard, cvv: text })}
-            />
-            <View style={styles.row}>
-              <TextInput
-                style={[styles.input, { flex: 1, marginRight: 5 }]}
-                placeholder="MM"
-                keyboardType="number-pad"
-                value={newCard.expirationMonth}
-                onChangeText={(text) =>
-                  setNewCard({ ...newCard, expirationMonth: text })
-                }
-              />
-              <TextInput
-                style={[styles.input, { flex: 1, marginLeft: 5 }]}
-                placeholder="YY"
-                keyboardType="number-pad"
-                value={newCard.expirationYear}
-                onChangeText={(text) =>
-                  setNewCard({ ...newCard, expirationYear: text })
-                }
-              />
-            </View>
-            {errorMessage ? (
-              <Text style={styles.errorText}>{errorMessage}</Text>
-            ) : null}
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.addButton} onPress={saveCard}>
-                <Text style={styles.addButtonText}>Save</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => setIsEditModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.cancelButton, { backgroundColor: "#f44336" }]}
-                onPress={() => setIsConfirmModalVisible(true)}
-              >
-                <Text style={styles.cancelButtonText}>Remove Card</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Confirmation Modal for Deleting a Card */}
-      <Modal
-        visible={isConfirmModalVisible}
-        animationType="fade"
-        transparent={true}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>
-              Are you sure you want to remove this card?
-            </Text>
-            <View style={styles.modalActions}>
-              <TouchableOpacity style={styles.addButton} onPress={removeCard}>
-                <Text style={styles.addButtonText}>Yes</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.cancelButton}
-                onPress={() => setIsConfirmModalVisible(false)}
-              >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        <Text style={styles.showStripeCardsText}>Show Stripe Cards</Text>
+      </TouchableOpacity>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 16,
-    backgroundColor: "#f5f5f5",
-  },
-  cardItem: {
-    backgroundColor: "white",
-    padding: 16,
-    marginBottom: 10,
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 5,
-    elevation: 2,
-  },
-  cardText: {
-    fontSize: 16,
-    color: "#333",
-  },
-  emptyMessage: {
-    fontSize: 18,
-    textAlign: "center",
-    color: "#888",
-    marginTop: 20,
-  },
-  fab: {
-    position: "absolute",
-    bottom: 20,
-    right: 20,
-    backgroundColor: "#2196F3",
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 5,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  modalContent: {
-    backgroundColor: "white",
-    padding: 20,
-    borderRadius: 10,
-    width: "90%",
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 10,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 10,
-  },
-  modalActions: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  addButton: {
-    backgroundColor: "#2196F3",
-    padding: 10,
-    borderRadius: 8,
-  },
-  addButtonText: {
-    color: "white",
-    fontWeight: "bold",
-  },
-  cancelButton: {
-    backgroundColor: "#eb463b",
-    padding: 10,
-    borderRadius: 8,
-  },
-  cancelButtonText: {
-    color: "white",
-    fontWeight: "bold",
-  },
-});
 
 export default Cards;
